@@ -5,33 +5,65 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Тайный Санта 🎅</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
   body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    background: #f7fafc;
+    font-family: 'Roboto', sans-serif;
+    background: url('https://all-vector.ru/files/img/2/01571.jpg') no-repeat center center fixed;
+    background-size: cover;
     color: #111;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 40px 16px;
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
   }
+
+  /* Декоративные изображения Санты и оленей */
+  .decor {
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+    animation: float 20s linear infinite;
+  }
+
+  .decor:nth-child(1) { top: 10%; left: 5%; width: 80px; }
+  .decor:nth-child(2) { top: 30%; right: 10%; width: 100px; animation-duration: 25s; }
+  .decor:nth-child(3) { bottom: 15%; left: 15%; width: 60px; animation-duration: 22s; }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0px); }
+  }
+
   h1 {
-    font-size: 28px;
+    font-size: 32px;
     margin-bottom: 12px;
-    color: #1e3a8a;
+    color: #fff;
+    text-shadow: 2px 2px 8px #000;
+    z-index: 1;
   }
   p {
     max-width: 460px;
     text-align: center;
     margin-bottom: 20px;
+    color: #fff;
+    text-shadow: 1px 1px 6px #000;
+    z-index: 1;
   }
   .card {
-    background: white;
+    background: rgba(255,255,255,0.95);
     padding: 28px;
     border-radius: 16px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
     width: 100%;
     max-width: 400px;
     text-align: center;
+    z-index: 1;
+    position: relative;
   }
   input {
     width: 100%;
@@ -51,6 +83,7 @@
     font-size: 16px;
     cursor: pointer;
     font-weight: 600;
+    margin-bottom: 8px;
   }
   button:hover {
     background: #1d4ed8;
@@ -68,17 +101,24 @@
   .small {
     margin-top: 12px;
     font-size: 13px;
-    color: #555;
+    color: #333;
   }
 </style>
 </head>
 <body>
+
+  <!-- Декоративные элементы -->
+  <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" class="decor" alt="Санта">
+  <img src="https://cdn-icons-png.flaticon.com/512/616/616442.png" class="decor" alt="Олень">
+  <img src="https://cdn-icons-png.flaticon.com/512/616/616454.png" class="decor" alt="Олень">
+
   <h1>🎅 Тайный Санта</h1>
   <p>Результаты сохраняются на этом устройстве — всё по-честному 🎁</p>
 
   <div class="card">
     <input id="nameInput" type="text" placeholder="Ваше имя">
     <button id="showBtn">Узнать получателя 🎁</button>
+    <button onclick="resetAssignment(prompt('Введите код администратора'))">Перезапустить жеребьёвку (Админ)</button>
     <div id="message" class="error"></div>
     <div id="result" class="result"></div>
   </div>
@@ -96,7 +136,7 @@ const forbidden = {
   'Витя': new Set(['Юля']),
   'Юля': new Set(['Витя'])
 };
-for (const n of names) forbidden[n].add(n); // никто не дарит себе
+for (const n of names) forbidden[n].add(n); 
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -128,39 +168,38 @@ function generateAssignment() {
   return backtrack(0) ? result : null;
 }
 
-// --- Работа с localStorage ---
-const STORAGE_KEY = 'secretSantaAssignment_v5';
+const STORAGE_KEY = 'secretSantaAssignment_v6';
 const USER_KEY = 'secretSantaUser';
+const ADMIN_CODE = '098Лиза';
 
 function getAssignment() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      return null;
-    }
+    try { return JSON.parse(saved); } catch { return null; }
   }
   return null;
 }
 
-function saveAssignment(obj) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
-}
+function saveAssignment(obj) { localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }
+function saveUser(name) { localStorage.setItem(USER_KEY, name); }
+function getUser() { return localStorage.getItem(USER_KEY); }
 
-function saveUser(name) {
-  localStorage.setItem(USER_KEY, name);
-}
-
-function getUser() {
-  return localStorage.getItem(USER_KEY);
-}
-
-// --- Нормализация имени ---
 function normalizeName(input) {
   if (!input) return '';
   const trimmed = input.trim().toLowerCase();
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+// --- Перезапуск жеребьёвки ---
+function resetAssignment(code) {
+  if(code === ADMIN_CODE){
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(USER_KEY);
+    assignment = generateAssignment();
+    saveAssignment(assignment);
+    alert("🎄 Жеребьёвка перезапущена!");
+    location.reload();
+  } else { alert("❌ Неверный код"); }
 }
 
 // --- UI ---
@@ -180,8 +219,6 @@ btn.addEventListener('click', () => {
   res.textContent = '';
 
   const enteredName = normalizeName(input.value);
-
-  // проверяем, зарегистрирован ли уже пользователь
   const savedUser = getUser();
   if (savedUser && savedUser !== enteredName) {
     msg.textContent = '❌ Вы можете узнать только результат для своего имени: ' + savedUser;
@@ -204,4 +241,4 @@ btn.addEventListener('click', () => {
 });
 </script>
 </body>
-</html>
+</html
